@@ -1,31 +1,8 @@
 # 📦 Dokumentasi Proyek — Inventaris Barang
 
-> **Mata Kuliah:** Pemrograman Aplikasi Bergerak (PAB)  
-> **Jenis Proyek:** Mini Project 1  
-> **Platform:** Flutter (Mobile & Web)  
-> **Versi:** 0.1.0
-
 ---
 
-## � Pembaruan Terbaru
-
-- Tema:
-  - Default terang saat belum login.
-  - Toggle terang/gelap tersedia saat sesi aktif pada halaman Inventaris.
-  - Setelah logout, tema kembali ke terang.
-- Pencarian:
-  - Filter kategori diselaraskan dengan data (ELEKTRONIK, AUDIO, FURNITUR, DEKORASI, LOGISTIK).
-  - Pencarian mencakup nama, kode barang, dan lokasi.
-- Gambar:
-  - Upload gambar ke Supabase Storage bucket `item_images` (folder `public/<userId>/`), URL publik disimpan ke database dan tampil di daftar.
-- Onboarding:
-  - Menggunakan gambar lokal `assets/images/onBoard.jpg`.
-- Reset Password:
-  - Fitur reset password dihapus sesuai permintaan.
-
----
-
-## �📋 Daftar Isi
+##📋 Daftar Isi
 
 1. [Gambaran Umum](#1-gambaran-umum)
 2. [Teknologi & Dependensi](#2-teknologi--dependensi)
@@ -35,9 +12,12 @@
 6. [Model Data](#6-model-data)
 7. [Controller](#7-controller--state-management)
 8. [Fitur & Tampilan](#8-fitur--tampilan)
-   - [8.1 Halaman Utama (Inventaris Screen)](#81-halaman-utama--inventaris-screen)
-   - [8.2 Tambah Barang](#82-tambah-barang--tambah-barang-screen)
-   - [8.3 Edit Barang](#83-edit-barang--edit-barang-screen)
+   - [8.1 Onboarding (Onboarding Screen)](#81-onboarding--onboarding-screen)
+   - [8.2 Masuk (Login Screen)](#82-masuk--login-screen)
+   - [8.3 Daftar (Register Screen)](#83-daftar--register-screen)
+   - [8.4 Halaman Utama (Inventaris Screen)](#84-halaman-utama--inventaris-screen)
+   - [8.5 Tambah Barang](#85-tambah-barang--tambah-barang-screen)
+   - [8.6 Edit Barang](#86-edit-barang--edit-barang-screen)
 9. [Widget Reusable](#9-widget-reusable)
 10. [Alur Navigasi](#10-alur-navigasi)
 11. [Validasi Form](#11-validasi-form)
@@ -317,7 +297,145 @@ Dialog:
 
 ---
 
-### 8.1 Halaman Utama — Inventaris Screen
+### 8.1 Onboarding — Onboarding Screen
+
+**File:** `lib/screens/onboarding_screen.dart`  
+**Widget Type:** `StatelessWidget`
+
+> Halaman pembuka yang menampilkan gambar hero dari aset lokal, judul, deskripsi singkat, dan dua tombol tindakan.
+
+---
+
+#### 🖥️ Tampilan & Komponen UI
+
+<table>
+<tr>
+<td width="65%" valign="top">
+
+**Hero Image:**
+- Sumber: `assets/images/onBoard.jpg` (lokal)
+- Ditampilkan di dalam `ClipRRect` radius 24, `BoxFit.cover`
+
+**Headline & Deskripsi:**
+- Judul tebal multi-baris: *"Kelola Inventaris dengan Mudah"*
+- Deskripsi singkat tiga baris tentang manfaat aplikasi
+
+**Aksi:**
+- Tombol **Masuk** (oranye, penuh) → navigasi ke Login
+- Tombol **Daftar** (outlined) → navigasi ke Register
+
+</td>
+<td width="35%" valign="top" align="center">
+
+> 📷 * *
+
+</td>
+</tr>
+</table>
+
+#### ⚙️ Aksi Navigasi
+
+```dart
+ElevatedButton(onPressed: () => Get.to(() => const LoginScreen()));
+OutlinedButton(onPressed: () => Get.to(() => const RegisterScreen()));
+```
+
+---
+
+### 8.2 Masuk — Login Screen
+
+**File:** `lib/screens/login_screen.dart`  
+**Widget Type:** `StatefulWidget`
+
+> Form autentikasi untuk pengguna terdaftar.
+
+---
+
+#### 🖥️ Tampilan & Komponen UI
+
+<table>
+<tr>
+<td width="65%" valign="top">
+
+**AppBar:**
+- Judul **"Masuk"**, tombol back
+
+**Header:**
+- Ikon kotak arsip dengan latar oranye muda
+- Judul **"Selamat Datang"** dan subteks bantuan
+
+**Form:**
+- `Email` (validator: wajib, mengandung `@`)
+- `Password` dengan toggle sembunyikan/tampilkan (validator: wajib, min. 6)
+
+**Aksi:**
+- Tombol **Masuk** dengan indikator loading saat submit
+- Teks link: *"Belum punya akun? Daftar"* → ke Register
+
+</td>
+<td width="35%" valign="top" align="center">
+
+> 📷 *Tambahkan screenshot halaman login di sini*
+
+</td>
+</tr>
+</table>
+
+#### ⚙️ Aksi Navigasi
+
+```dart
+onPressed: _isSubmitting ? null : _login;  // Validasi, lalu _auth.signIn(...)
+// Link ke Register:
+GestureDetector(onTap: () => Get.to(() => const RegisterScreen()));
+```
+
+---
+
+### 8.3 Daftar — Register Screen
+
+**File:** `lib/screens/register_screen.dart`  
+**Widget Type:** `StatefulWidget`
+
+> Form pembuatan akun baru dengan validasi lengkap dan konfirmasi password.
+
+---
+
+#### 🖥️ Tampilan & Komponen UI
+
+<table>
+<tr>
+<td width="65%" valign="top">
+
+**AppBar:**
+- Judul **"Daftar Akun"**, tombol back
+
+**Header:**
+- Ikon kotak arsip dengan latar oranye muda
+- Judul **"Buat Akun Baru"** dan subteks
+
+**Form:**
+- `Nama Lengkap` (validator: wajib)
+- `Email` (validator: wajib, valid)
+- `Kata Sandi` (validator: wajib, min. 6)
+- `Konfirmasi Kata Sandi` (validator: sama dengan password)
+
+**Aksi:**
+- Tombol **Daftar Sekarang** dengan indikator loading
+- Link kembali ke **Masuk**
+- Catatan konfirmasi email setelah pendaftaran
+
+</td>
+<td width="35%" valign="top" align="center">
+
+> 📷 *Tambahkan screenshot halaman register di sini*
+
+</td>
+</tr>
+</table>
+
+---
+
+### 8.4 Halaman Utama — Inventaris Screen
 
 **File:** `lib/screens/inventaris_screen.dart`  
 **Widget Type:** `GetView<InventarisController>` (StatelessWidget + GetX)
@@ -390,7 +508,7 @@ Future<void> _navigateToEdit(int index) async {
 
 ---
 
-### 8.2 Tambah Barang — Tambah Barang Screen
+### 8.5 Tambah Barang — Tambah Barang Screen
 
 **File:** `lib/screens/tambah_barang_screen.dart`  
 **Widget Type:** `StatefulWidget`
@@ -490,7 +608,7 @@ Satuan  : Pcs / Buah | Unit | Set | Lusin | Kg
 
 ---
 
-### 8.3 Edit Barang — Edit Barang Screen
+### 8.6 Edit Barang — Edit Barang Screen
 
 **File:** `lib/screens/edit_barang_screen.dart`  
 **Widget Type:** `StatefulWidget`
@@ -1373,15 +1491,3 @@ class InventarisScreen extends GetView<InventarisController> {
 | `GetView<T>` | get | inventaris_screen.dart |
 
 ---
-
-## 📝 Catatan Pengembangan
-
-> **Data tidak persisten** — Semua data barang disimpan di memori (in-memory `RxList`) dan akan hilang saat aplikasi ditutup. Untuk persistensi data, pertimbangkan integrasi dengan **SQLite** (`sqflite`), **SharedPreferences**, atau **Hive**.
-
-> **ID Barang** — Dibuat dari `DateTime.now().millisecondsSinceEpoch.toString()` sehingga unik secara praktis, namun tidak dijamin unik dalam kasus ekstrem (barang ditambah bersamaan).
-
-> **Foto** — Disimpan sebagai `Uint8List` (byte array) di memori. Untuk skala produksi, sebaiknya disimpan ke penyimpanan lokal atau cloud storage.
-
----
-
-*Dokumentasi ini dibuat untuk keperluan akademik Pratikum Mini Project 1 - Pemrograman Aplikasi Bergerak (PAB) Semester 4.*
