@@ -2,7 +2,7 @@
 
 ---
 
-##📋 Daftar Isi
+## 📋 Daftar Isi
 
 1. [Gambaran Umum](#1-gambaran-umum)
 2. [Teknologi & Dependensi](#2-teknologi--dependensi)
@@ -327,7 +327,8 @@ Dialog:
 </td>
 <td width="35%" valign="top" align="center">
 
-> 📷 * *
+> <img width="314" height="605" alt="image" src="https://github.com/user-attachments/assets/2a314eb0-cc89-416a-aab1-3fa49cb87da7" />
+
 
 </td>
 </tr>
@@ -375,7 +376,8 @@ OutlinedButton(onPressed: () => Get.to(() => const RegisterScreen()));
 </td>
 <td width="35%" valign="top" align="center">
 
-> 📷 *Tambahkan screenshot halaman login di sini*
+> <img width="325" height="610" alt="image" src="https://github.com/user-attachments/assets/13a71ab0-f594-4005-bb9a-8a0684ce54ee" />
+" />
 
 </td>
 </tr>
@@ -427,7 +429,8 @@ GestureDetector(onTap: () => Get.to(() => const RegisterScreen()));
 </td>
 <td width="35%" valign="top" align="center">
 
-> 📷 *Tambahkan screenshot halaman register di sini*
+>  <img width="330" height="610" alt="image" src="https://github.com/user-attachments/assets/7180d504-c2d4-4532-ba83-b5455b00ee4b" />
+
 
 </td>
 </tr>
@@ -473,8 +476,8 @@ Daftar barang ditampilkan menggunakan `ListView.builder` yang memuat widget `Ite
 <td width="35%" valign="top" align="center">
 
 <!-- Tambahkan screenshot halaman utama di sini -->
-> 📷 *Tambahkan screenshot*
-> *halaman utama di sini*
+>  <img width="323" height="600" alt="image" src="https://github.com/user-attachments/assets/32dbb8d1-79a8-4da6-bfff-53d15fcca593" /> 
+
 
 </td>
 </tr>
@@ -553,8 +556,7 @@ Future<void> _navigateToEdit(int index) async {
 <td width="35%" valign="top" align="center">
 
 <!-- Tambahkan screenshot halaman Tambah Barang di sini -->
-> 📷 *Tambahkan screenshot*
-> *halaman tambah barang di sini*
+> <img width="331" height="603" alt="image" src="https://github.com/user-attachments/assets/616eedee-9353-4b6d-ab89-d3462457891f" />
 
 </td>
 </tr>
@@ -647,8 +649,8 @@ Satuan  : Pcs / Buah | Unit | Set | Lusin | Kg
 <td width="35%" valign="top" align="center">
 
 <!-- Tambahkan screenshot halaman Edit Barang di sini -->
-> 📷 *Tambahkan screenshot*
-> *halaman edit barang di sini*
+<img width="330" height="601" alt="image" src="https://github.com/user-attachments/assets/59f499ed-517b-485b-b822-7cbdc5e9d127" />
+
 
 </td>
 </tr>
@@ -736,8 +738,8 @@ Widget kartu yang menampilkan **ringkasan informasi** satu barang dalam daftar i
 <td width="35%" valign="top" align="center">
 
 <!-- Tambahkan screenshot Item Card di sini -->
-> 📷 *Tambahkan screenshot*
-> *widget item card di sini*
+> <img width="633" height="292" alt="image" src="https://github.com/user-attachments/assets/ea74fb79-370b-4b26-83e1-050f5abe577f" />
+
 
 </td>
 </tr>
