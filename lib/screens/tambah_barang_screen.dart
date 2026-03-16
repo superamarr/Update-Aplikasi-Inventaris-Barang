@@ -2,6 +2,8 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../controllers/inventaris_controller.dart';
 import '../models/item.dart';
 import '../utils/app_colors.dart';
 
@@ -22,6 +24,8 @@ class _TambahBarangScreenState extends State<TambahBarangScreen> {
   String? _selectedKategori;
   String? _selectedSatuan;
   Uint8List? _imageBytes;
+  bool _isSaving = false;
+  late InventarisController _inventarisController;
 
   final List<String> _kategoriList = [
     'Elektronik',
@@ -48,6 +52,12 @@ class _TambahBarangScreenState extends State<TambahBarangScreen> {
         _selectedSatuan != null ||
         _tanggalMasuk != null ||
         _imageBytes != null;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _inventarisController = Get.find<InventarisController>();
   }
 
   @override
@@ -113,63 +123,56 @@ class _TambahBarangScreenState extends State<TambahBarangScreen> {
     }
   }
 
-  void _simpan() {
+  Future<void> _simpan() async {
+    if (_isSaving) return;
     if (!_formKey.currentState!.validate()) return;
 
-    if (_selectedKategori == null) {
-      Get.snackbar(
-        'Peringatan',
-        'Pilih kategori terlebih dahulu',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red.shade400,
-        colorText: Colors.white,
-        margin: const EdgeInsets.all(16),
-        borderRadius: 12,
-      );
-      return;
-    }
-    if (_selectedSatuan == null) {
-      Get.snackbar(
-        'Peringatan',
-        'Pilih satuan terlebih dahulu',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red.shade400,
-        colorText: Colors.white,
-        margin: const EdgeInsets.all(16),
-        borderRadius: 12,
-      );
-      return;
-    }
-    if (_tanggalMasuk == null) {
-      Get.snackbar(
-        'Peringatan',
-        'Pilih tanggal masuk terlebih dahulu',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red.shade400,
-        colorText: Colors.white,
-        margin: const EdgeInsets.all(16),
-        borderRadius: 12,
-      );
-      return;
-    }
+    setState(() => _isSaving = true);
 
-    final category = _selectedKategori!.toUpperCase();
-    final item = Item(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      name: _namaController.text.trim(),
-      kodeBarang: _kodeController.text.trim(),
-      category: category,
-      stock: int.parse(_stokController.text.trim()),
-      satuan: _selectedSatuan!,
-      location: _lokasiController.text.trim(),
-      tanggalMasuk: _tanggalMasuk,
-      imageBytes: _imageBytes,
-      icon: getIconForCategory(category),
-      iconBgColor: getBgColorForCategory(category),
-      categoryColor: getCategoryBadgeColor(category),
+    Get.dialog(
+      const Center(
+        child: Card(
+          child: Padding(
+            padding: EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('Menyimpan data...'),
+              ],
+            ),
+          ),
+        ),
+      ),
+      barrierDismissible: false,
     );
 
-    Get.back(result: item);
+    try {
+      final category = _selectedKategori!.toUpperCase();
+      final userId = Supabase.instance.client.auth.currentUser?.id; 
+      final item = Item(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        name: _namaController.text.trim(),
+        userId: userId,
+        kodeBarang: _kodeController.text.trim(),
+        category: category,
+        stock: int.parse(_stokController.text.trim()),
+        satuan: _selectedSatuan!,
+        location: _lokasiController.text.trim(),
+        tanggalMasuk: _tanggalMasuk,
+        imageBytes: _imageBytes,
+        icon: getIconForCategory(category),
+        iconBgColor: getBgColorForCategory(category),
+        categoryColor: getCategoryBadgeColor(category),
+      );
+
+      await _inventarisController.createItem(item);
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
+    }
   }
 
   InputDecoration _buildInputDecoration({
@@ -183,15 +186,15 @@ class _TambahBarangScreenState extends State<TambahBarangScreen> {
       prefixIcon: prefixIcon,
       suffixIcon: suffixIcon,
       filled: true,
-      fillColor: AppColors.white,
+      fillColor: Theme.of(context).cardColor,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+        borderSide: BorderSide(color: Theme.of(context).dividerColor),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+        borderSide: BorderSide(color: Theme.of(context).dividerColor),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
@@ -234,13 +237,13 @@ class _TambahBarangScreenState extends State<TambahBarangScreen> {
         }
       },
       child: Scaffold(
-        backgroundColor: AppColors.background,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         appBar: AppBar(
-          backgroundColor: AppColors.white,
+          backgroundColor: Theme.of(context).cardColor,
           elevation: 0,
           scrolledUnderElevation: 1,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
+            icon: Icon(Icons.arrow_back, color: Theme.of(context).colorScheme.onSurface),
             onPressed: () async {
               final shouldPop = await _onWillPop();
               if (shouldPop) {
@@ -248,12 +251,12 @@ class _TambahBarangScreenState extends State<TambahBarangScreen> {
               }
             },
           ),
-          title: const Text(
+          title: Text(
             'Tambah Barang Baru',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w700,
-              color: AppColors.textPrimary,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           centerTitle: false,
@@ -264,10 +267,9 @@ class _TambahBarangScreenState extends State<TambahBarangScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header info
                 Container(
                   width: double.infinity,
-                  color: AppColors.white,
+                  color: Theme.of(context).cardColor,
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
                   child: Row(
                     children: [
@@ -285,7 +287,7 @@ class _TambahBarangScreenState extends State<TambahBarangScreen> {
                         ),
                       ),
                       const SizedBox(width: 12),
-                      const Expanded(
+                      Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -294,15 +296,15 @@ class _TambahBarangScreenState extends State<TambahBarangScreen> {
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w700,
-                                color: AppColors.textPrimary,
+                                color: Theme.of(context).textTheme.bodyLarge?.color,
                               ),
                             ),
-                            SizedBox(height: 2),
+                            const SizedBox(height: 2),
                             Text(
                               'Lengkapi formulir di bawah untuk mendaftarkan barang baru ke sistem.',
                               style: TextStyle(
                                 fontSize: 12,
-                                color: AppColors.textSecondary,
+                                color: Theme.of(context).textTheme.bodyMedium?.color,
                               ),
                             ),
                           ],
@@ -319,26 +321,7 @@ class _TambahBarangScreenState extends State<TambahBarangScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const SizedBox(height: 16),
-
-                      // Kode Barang
-                      _buildLabel('Kode Barang'),
-                      TextFormField(
-                        controller: _kodeController,
-                        decoration: _buildInputDecoration(
-                          hintText: 'Contoh: BRG-001',
-                        ),
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Kode barang wajib diisi';
-                          }
-                          return null;
-                        },
-                      ),
-
                       const SizedBox(height: 20),
-
-                      // Nama Barang
                       _buildLabel('Nama Barang'),
                       TextFormField(
                         controller: _namaController,
@@ -354,11 +337,24 @@ class _TambahBarangScreenState extends State<TambahBarangScreen> {
                       ),
 
                       const SizedBox(height: 20),
+                      _buildLabel('Kode Barang'),
+                      TextFormField(
+                        controller: _kodeController,
+                        decoration: _buildInputDecoration(
+                          hintText: 'Contoh: ELK-001',
+                        ),
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Kode barang wajib diisi';
+                          }
+                          return null;
+                        },
+                      ),
 
-                      // Kategori
+                      const SizedBox(height: 20),
                       _buildLabel('Kategori'),
                       DropdownButtonFormField<String>(
-                        value: _selectedKategori,
+                        initialValue: _selectedKategori,
                         decoration: _buildInputDecoration(
                           hintText: 'Pilih Kategori',
                         ),
@@ -377,11 +373,15 @@ class _TambahBarangScreenState extends State<TambahBarangScreen> {
                             _selectedKategori = value;
                           });
                         },
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Kategori wajib dipilih';
+                          }
+                          return null;
+                        },
                       ),
 
                       const SizedBox(height: 20),
-
-                      // Jumlah Stok
                       _buildLabel('Jumlah Stok'),
                       TextFormField(
                         controller: _stokController,
@@ -405,11 +405,9 @@ class _TambahBarangScreenState extends State<TambahBarangScreen> {
                       ),
 
                       const SizedBox(height: 20),
-
-                      // Satuan
                       _buildLabel('Satuan'),
                       DropdownButtonFormField<String>(
-                        value: _selectedSatuan,
+                        initialValue: _selectedSatuan,
                         decoration: _buildInputDecoration(
                           hintText: 'Pcs / Buah',
                         ),
@@ -428,11 +426,15 @@ class _TambahBarangScreenState extends State<TambahBarangScreen> {
                             _selectedSatuan = value;
                           });
                         },
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Satuan wajib dipilih';
+                          }
+                          return null;
+                        },
                       ),
 
                       const SizedBox(height: 20),
-
-                      // Lokasi Penyimpanan
                       _buildLabel('Lokasi Penyimpanan'),
                       TextFormField(
                         controller: _lokasiController,
@@ -453,8 +455,6 @@ class _TambahBarangScreenState extends State<TambahBarangScreen> {
                       ),
 
                       const SizedBox(height: 20),
-
-                      // Tanggal Masuk
                       _buildLabel('Tanggal Masuk'),
                       GestureDetector(
                         onTap: _pickDate,
@@ -475,13 +475,17 @@ class _TambahBarangScreenState extends State<TambahBarangScreen> {
                                 size: 20,
                               ),
                             ),
+                            validator: (value) {
+                              if (_tanggalMasuk == null) {
+                                return 'Tanggal masuk wajib dipilih';
+                              }
+                              return null;
+                            },
                           ),
                         ),
                       ),
 
                       const SizedBox(height: 24),
-
-                      // Foto Barang
                       _buildLabel('Foto Barang'),
                       Row(
                         children: [
@@ -509,8 +513,8 @@ class _TambahBarangScreenState extends State<TambahBarangScreen> {
                                     child: Container(
                                       width: 22,
                                       height: 22,
-                                      decoration: const BoxDecoration(
-                                        color: Colors.white,
+                                      decoration: BoxDecoration(
+                                        color: Theme.of(context).cardColor,
                                         shape: BoxShape.circle,
                                         boxShadow: [
                                           BoxShadow(
@@ -519,10 +523,10 @@ class _TambahBarangScreenState extends State<TambahBarangScreen> {
                                           ),
                                         ],
                                       ),
-                                      child: const Icon(
+                                      child: Icon(
                                         Icons.close,
                                         size: 14,
-                                        color: AppColors.textPrimary,
+                                        color: Theme.of(context).colorScheme.onSurface,
                                       ),
                                     ),
                                   ),
@@ -568,8 +572,6 @@ class _TambahBarangScreenState extends State<TambahBarangScreen> {
                       ),
 
                       const SizedBox(height: 32),
-
-                      // Simpan Button
                       SizedBox(
                         width: double.infinity,
                         height: 52,

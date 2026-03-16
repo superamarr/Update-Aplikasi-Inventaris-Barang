@@ -2,6 +2,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
+import '../controllers/inventaris_controller.dart';
 import '../models/item.dart';
 import '../utils/app_colors.dart';
 
@@ -17,11 +18,14 @@ class EditBarangScreen extends StatefulWidget {
 class _EditBarangScreenState extends State<EditBarangScreen> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _namaController;
+  late TextEditingController _kodeController;
   late TextEditingController _stokController;
   late TextEditingController _lokasiController;
   String? _selectedKategori;
   Uint8List? _imageBytes;
   bool _imageChanged = false;
+  bool _isSaving = false;
+  late InventarisController _inventarisController;
 
   final List<String> _kategoriList = [
     'Elektronik',
@@ -35,17 +39,20 @@ class _EditBarangScreenState extends State<EditBarangScreen> {
   void initState() {
     super.initState();
     _namaController = TextEditingController(text: widget.item.name);
+    _kodeController = TextEditingController(text: widget.item.kodeBarang);
     _stokController = TextEditingController(text: widget.item.stock.toString());
     _lokasiController = TextEditingController(text: widget.item.location);
     final cat = widget.item.category.substring(0, 1) +
         widget.item.category.substring(1).toLowerCase();
     _selectedKategori = _kategoriList.contains(cat) ? cat : null;
     _imageBytes = widget.item.imageBytes;
+    _inventarisController = Get.find<InventarisController>();
   }
 
   @override
   void dispose() {
     _namaController.dispose();
+    _kodeController.dispose();
     _stokController.dispose();
     _lokasiController.dispose();
     super.dispose();
@@ -53,6 +60,7 @@ class _EditBarangScreenState extends State<EditBarangScreen> {
 
   bool get _hasChanges {
     return _namaController.text != widget.item.name ||
+        _kodeController.text != widget.item.kodeBarang ||
         _stokController.text != widget.item.stock.toString() ||
         _lokasiController.text != widget.item.location ||
         _selectedKategori !=
@@ -102,34 +110,52 @@ class _EditBarangScreenState extends State<EditBarangScreen> {
     }
   }
 
-  void _update() {
+  Future<void> _update() async {
+    if (_isSaving) return;
     if (!_formKey.currentState!.validate()) return;
-    if (_selectedKategori == null) {
-      Get.snackbar(
-        'Peringatan',
-        'Pilih kategori terlebih dahulu',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red.shade400,
-        colorText: Colors.white,
-        margin: const EdgeInsets.all(16),
-        borderRadius: 12,
-      );
-      return;
-    }
 
-    final category = _selectedKategori!.toUpperCase();
-    final updated = widget.item.copyWith(
-      name: _namaController.text.trim(),
-      category: category,
-      stock: int.parse(_stokController.text.trim()),
-      location: _lokasiController.text.trim(),
-      imageBytes: _imageBytes,
-      icon: getIconForCategory(category),
-      iconBgColor: getBgColorForCategory(category),
-      categoryColor: getCategoryBadgeColor(category),
+    setState(() => _isSaving = true);
+
+    Get.dialog(
+      const Center(
+        child: Card(
+          child: Padding(
+            padding: EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('Memperbarui data...'),
+              ],
+            ),
+          ),
+        ),
+      ),
+      barrierDismissible: false,
     );
 
-    Get.back(result: updated);
+    try {
+      final category = _selectedKategori!.toUpperCase();
+      final updated = widget.item.copyWith(
+        name: _namaController.text.trim(),
+        kodeBarang: _kodeController.text.trim(),
+        category: category,
+        stock: int.parse(_stokController.text.trim()),
+        location: _lokasiController.text.trim(),
+        imageBytes: _imageBytes,
+        icon: getIconForCategory(category),
+        iconBgColor: getBgColorForCategory(category),
+        categoryColor: getCategoryBadgeColor(category),
+      );
+
+      await _inventarisController.updateItemRemote(updated);
+      // Dialog loading akan ditutup di controller saat dialog sukses muncul
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
+    }
   }
 
   InputDecoration _buildInputDecoration({
@@ -143,15 +169,15 @@ class _EditBarangScreenState extends State<EditBarangScreen> {
       suffixIcon: suffixIcon,
       prefixIcon: prefixIcon,
       filled: true,
-      fillColor: AppColors.white,
+      fillColor: Theme.of(context).cardColor,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+        borderSide: BorderSide(color: Theme.of(context).dividerColor),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+        borderSide: BorderSide(color: Theme.of(context).dividerColor),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
@@ -183,6 +209,46 @@ class _EditBarangScreenState extends State<EditBarangScreen> {
     );
   }
 
+  Widget _buildImagePreview() {
+    if (_imageBytes != null) {
+      return Image.memory(
+        _imageBytes!,
+        width: 80,
+        height: 80,
+        fit: BoxFit.cover,
+      );
+    }
+
+    if (widget.item.imageUrl != null && widget.item.imageUrl!.isNotEmpty) {
+      return Image.network(
+        widget.item.imageUrl!,
+        width: 80,
+        height: 80,
+        fit: BoxFit.cover,
+        errorBuilder: (ctx, err, st) => Container(
+          width: 80,
+          height: 80,
+          color: const Color(0xFFE0E0E0),
+          child: const Icon(Icons.error_outline),
+        ),
+      );
+    }
+
+    return Container(
+      width: 80,
+      height: 80,
+      decoration: BoxDecoration(
+        color: const Color(0xFFE0E0E0),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: const Icon(
+        Icons.photo_camera_outlined,
+        size: 32,
+        color: AppColors.textSecondary,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return PopScope(
@@ -195,26 +261,24 @@ class _EditBarangScreenState extends State<EditBarangScreen> {
         }
       },
       child: Scaffold(
-        backgroundColor: AppColors.background,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         appBar: AppBar(
-          backgroundColor: AppColors.white,
+          backgroundColor: Theme.of(context).cardColor,
           elevation: 0,
           scrolledUnderElevation: 1,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
+            icon: Icon(Icons.arrow_back, color: Theme.of(context).colorScheme.onSurface),
             onPressed: () async {
               final shouldPop = await _onWillPop();
               if (shouldPop) Get.back();
             },
           ),
-          title: const Text(
-            'Edit Barang',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: AppColors.textPrimary,
-            ),
-          ),
+          title: Text('Edit Barang',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: Theme.of(context).colorScheme.onSurface,
+              )),
           centerTitle: false,
         ),
         body: Form(
@@ -227,9 +291,7 @@ class _EditBarangScreenState extends State<EditBarangScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const SizedBox(height: 8),
-
-                      // Nama Barang
+                  const SizedBox(height: 8),
                       _buildSectionLabel('NAMA BARANG'),
                       TextFormField(
                         controller: _namaController,
@@ -244,10 +306,23 @@ class _EditBarangScreenState extends State<EditBarangScreen> {
 
                       const SizedBox(height: 24),
 
-                      // Kategori
+                      _buildSectionLabel('KODE BARANG'),
+                      TextFormField(
+                        controller: _kodeController,
+                        decoration: _buildInputDecoration(hintText: 'Contoh: ELK-001'),
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Kode barang wajib diisi';
+                          }
+                          return null;
+                        },
+                      ),
+
+                      const SizedBox(height: 24),
+
                       _buildSectionLabel('KATEGORI'),
                       DropdownButtonFormField<String>(
-                        value: _selectedKategori,
+                        initialValue: _selectedKategori,
                         decoration: _buildInputDecoration(hintText: 'Pilih Kategori'),
                         icon: const Icon(
                           Icons.keyboard_arrow_down,
@@ -261,11 +336,16 @@ class _EditBarangScreenState extends State<EditBarangScreen> {
                             _selectedKategori = value;
                           });
                         },
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Kategori wajib dipilih';
+                          }
+                          return null;
+                        },
                       ),
 
                       const SizedBox(height: 24),
 
-                      // Stok Saat Ini
                       _buildSectionLabel('STOK SAAT INI'),
                       TextFormField(
                         controller: _stokController,
@@ -296,7 +376,6 @@ class _EditBarangScreenState extends State<EditBarangScreen> {
 
                       const SizedBox(height: 24),
 
-                      // Lokasi Penyimpanan
                       _buildSectionLabel('LOKASI PENYIMPANAN'),
                       TextFormField(
                         controller: _lokasiController,
@@ -318,7 +397,6 @@ class _EditBarangScreenState extends State<EditBarangScreen> {
 
                       const SizedBox(height: 24),
 
-                      // Edit Foto
                       _buildSectionLabel('EDIT FOTO'),
                       GestureDetector(
                         onTap: _editFoto,
@@ -326,28 +404,8 @@ class _EditBarangScreenState extends State<EditBarangScreen> {
                           children: [
                             ClipRRect(
                               borderRadius: BorderRadius.circular(10),
-                              child: _imageBytes != null
-                                  ? Image.memory(
-                                      _imageBytes!,
-                                      width: 80,
-                                      height: 80,
-                                      fit: BoxFit.cover,
-                                    )
-                                  : Container(
-                                      width: 80,
-                                      height: 80,
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFFE0E0E0),
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                      child: const Icon(
-                                        Icons.photo_camera_outlined,
-                                        size: 32,
-                                        color: AppColors.textSecondary,
-                                      ),
-                                    ),
+                              child: _buildImagePreview(),
                             ),
-                            // Edit overlay badge
                             Positioned(
                               bottom: 0,
                               right: 0,
@@ -384,14 +442,12 @@ class _EditBarangScreenState extends State<EditBarangScreen> {
                   ),
                 ),
               ),
-
-              // Bottom buttons
               Container(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-                decoration: const BoxDecoration(
-                  color: AppColors.white,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).cardColor,
                   border: Border(
-                    top: BorderSide(color: Color(0xFFEEEEEE), width: 1),
+                    top: BorderSide(color: Theme.of(context).dividerColor, width: 1),
                   ),
                 ),
                 child: Row(
@@ -407,19 +463,17 @@ class _EditBarangScreenState extends State<EditBarangScreen> {
                             }
                           },
                           style: OutlinedButton.styleFrom(
-                            side: const BorderSide(color: Color(0xFFE0E0E0)),
+                            side: BorderSide(color: Theme.of(context).dividerColor),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
                           ),
-                          child: const Text(
-                            'Batal',
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.textPrimary,
-                            ),
-                          ),
+                          child: Text('Batal',
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                                color: Theme.of(context).colorScheme.onSurface,
+                              )),
                         ),
                       ),
                     ),

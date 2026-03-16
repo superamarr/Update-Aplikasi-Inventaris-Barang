@@ -14,19 +14,69 @@ class ItemCard extends StatelessWidget {
     this.onDelete,
   });
 
+  Widget _buildImage() {
+    if (item.imageUrl != null && item.imageUrl!.isNotEmpty) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: Image.network(
+          item.imageUrl!,
+          width: 72,
+          height: 72,
+          fit: BoxFit.cover,
+          errorBuilder: (ctx, err, st) => Icon(
+            item.icon,
+            size: 36,
+            color: AppColors.textSecondary,
+          ),
+          loadingBuilder: (ctx, child, progress) {
+            if (progress == null) return child;
+            return const Center(
+              child: CircularProgressIndicator(strokeWidth: 2),
+            );
+          },
+        ),
+      );
+    }
+
+    if (item.imageBytes != null) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: Image.memory(
+          item.imageBytes!,
+          width: 72,
+          height: 72,
+          fit: BoxFit.cover,
+          errorBuilder: (ctx, err, st) => Icon(
+            item.icon,
+            size: 36,
+            color: AppColors.textSecondary,
+          ),
+        ),
+      );
+    }
+
+    return Icon(
+      item.icon,
+      size: 36,
+      color: AppColors.textSecondary,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       decoration: BoxDecoration(
-        color: AppColors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
+          if (!isDark)
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
         ],
       ),
       child: Column(
@@ -36,7 +86,6 @@ class ItemCard extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Foto barang atau icon placeholder
                 Container(
                   width: 72,
                   height: 72,
@@ -44,43 +93,22 @@ class ItemCard extends StatelessWidget {
                     color: item.iconBgColor,
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: item.imageBytes != null
-                      ? ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: Image.memory(
-                            item.imageBytes!,
-                            width: 72,
-                            height: 72,
-                            fit: BoxFit.cover,
-                            errorBuilder: (ctx, err, st) => Icon(
-                              item.icon,
-                              size: 36,
-                              color: AppColors.textSecondary,
-                            ),
-                          ),
-                        )
-                      : Icon(
-                          item.icon,
-                          size: 36,
-                          color: AppColors.textSecondary,
-                        ),
+                  child: _buildImage(),
                 ),
                 const SizedBox(width: 12),
-                // Info
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Nama + Kategori
                       Row(
                         children: [
                           Flexible(
                             child: Text(
                               item.name,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w600,
-                                color: AppColors.textPrimary,
+                                color: Theme.of(context).textTheme.bodyLarge?.color,
                               ),
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -108,7 +136,6 @@ class ItemCard extends StatelessWidget {
                         ],
                       ),
                       const SizedBox(height: 8),
-                      // Stok
                       Row(
                         children: [
                           const Icon(
@@ -127,7 +154,6 @@ class ItemCard extends StatelessWidget {
                         ],
                       ),
                       const SizedBox(height: 4),
-                      // Lokasi
                       Row(
                         children: [
                           const Icon(
@@ -151,13 +177,10 @@ class ItemCard extends StatelessWidget {
               ],
             ),
           ),
-          // Divider
-          const Divider(height: 1, thickness: 1, color: Color(0xFFEEEEEE)),
-          // Action buttons
+          Divider(height: 1, thickness: 1, color: Theme.of(context).dividerColor),
           IntrinsicHeight(
             child: Row(
               children: [
-                // Edit button
                 Expanded(
                   child: InkWell(
                     onTap: onEdit,
@@ -185,13 +208,11 @@ class ItemCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                // Garis pembatas vertikal
-                const VerticalDivider(
+                VerticalDivider(
                   width: 1,
                   thickness: 1,
-                  color: Color(0xFFEEEEEE),
+                  color: Theme.of(context).dividerColor,
                 ),
-                // Hapus button
                 Expanded(
                   child: InkWell(
                     onTap: onDelete,
